@@ -21,6 +21,7 @@ main{padding:0 14px 35px;margin-top:-30px}.card{background:var(--card);border:1p
 .label{font-size:13px;font-weight:750;color:var(--muted);margin-bottom:8px}.address-row{display:flex;gap:8px}.address{min-width:0;flex:1;border:1px solid var(--line);background:#f9f9ff;border-radius:12px;padding:13px 12px;font-weight:750;overflow-wrap:anywhere}
 button{border:0;border-radius:11px;background:var(--brand);color:white;font-weight:750;padding:12px 15px;cursor:pointer;font-size:14px}button.secondary{background:#efedff;color:#4e40c5}button:disabled{opacity:.55;cursor:wait}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.status{font-size:13px;color:var(--muted);margin-top:10px;min-height:20px}.topline{display:flex;align-items:center;justify-content:space-between;gap:10px}.topline h2{font-size:19px;margin:0}.pill{font-size:12px;background:#e9f8ef;color:#167b43;border-radius:99px;padding:5px 9px;font-weight:700}
 .empty{padding:28px 10px;text-align:center;color:var(--muted)}.mailrow{border:1px solid var(--line);padding:13px;border-radius:12px;margin-top:10px;cursor:pointer}.mailrow strong{display:block;overflow-wrap:anywhere}.mailrow small{color:var(--muted)}.preview{color:#62677b;margin-top:4px;overflow-wrap:anywhere}.message{white-space:pre-wrap;overflow-wrap:anywhere;background:#fafaff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:12px;max-height:50vh;overflow:auto}.otp{font-size:26px;font-weight:850;letter-spacing:3px;color:var(--brand);margin:8px 0}
+.message.html-message{padding:0;border:0;background:transparent;max-height:none;overflow:visible}.email-frame{display:block;width:100%;height:65vh;min-height:360px;max-height:760px;border:1px solid var(--line);border-radius:12px;background:#fff}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:0 20px 25px}
 @media(max-width:520px){.card{padding:16px}.address-row{flex-direction:column}.address-row button{width:100%}.topline{align-items:flex-start}}
 </style>
@@ -87,15 +88,35 @@ async function refreshInbox(){
   }
  }catch(e){setStatus(e.message);}
 }
-function renderMessageBody(text){
- const box=$("msgBody");box.replaceChildren();
- const re=/https?:\/\/[^\s<>"'`]+/gi;let last=0,m;
- while((m=re.exec(text))){
-  box.append(document.createTextNode(text.slice(last,m.index)));
-  let url=m[0],tail="";while(/[),.;!?\]}]$/.test(url)){tail=url.slice(-1)+tail;url=url.slice(0,-1);}
-  try{const parsed=new URL(url);if(parsed.protocol!=="http:"&&parsed.protocol!=="https:")throw new Error("Invalid link");const a=document.createElement("a");a.href=parsed.href;a.target="_blank";a.rel="noopener noreferrer";a.textContent=url;box.append(a);}catch{box.append(document.createTextNode(url));}
-  if(tail)box.append(document.createTextNode(tail));last=m.index+m[0].length;
+function decodeQuotedPrintable(text){
+ if(!/=3D|=20|=\r?\n/i.test(text))return text;
+ const bytes=text.replace(/=\r?\n/g,"").replace(/=([0-9a-f]{2})/gi,(_,h)=>String.fromCharCode(parseInt(h,16)));
+ try{return decodeURIComponent(escape(bytes));}catch{return bytes;}
+}
+function renderEmailHtml(source){
+ const doc=new DOMParser().parseFromString(source,"text/html");
+ doc.querySelectorAll("script,iframe,object,embed,form,base,meta,link,input,button,textarea,select,video,audio,source,svg,math").forEach(n=>n.remove());
+ doc.querySelectorAll("img").forEach(img=>{const alt=img.getAttribute("alt");if(alt)img.replaceWith(doc.createTextNode("["+alt+"]"));else img.remove();});
+ for(const style of doc.querySelectorAll("style"))style.textContent=style.textContent.replace(/@import[^;]+;?/gi,"").replace(/url\s*\([^)]*\)/gi,"none").replace(/expression\s*\([^)]*\)/gi,"");
+ for(const el of doc.querySelectorAll("*"))for(const attr of [...el.attributes]){
+  const name=attr.name.toLowerCase(),value=attr.value.trim();
+  if(name.startsWith("on")||["src","srcset","poster","background","formaction"].includes(name)){el.removeAttribute(attr.name);continue;}
+  if(name==="href"){
+   if(el.tagName!=="A"||!/^https?:\/\//i.test(value)){el.removeAttribute(attr.name);continue;}
+   el.setAttribute("target","_blank");el.setAttribute("rel","noopener noreferrer");continue;
+  }
+  if(name==="style"&&/(url\s*\(|expression\s*\(|@import|behavior\s*:)/i.test(value)){el.removeAttribute(attr.name);continue;}
+  if(!["style","class","id","width","height","align","valign","cellpadding","cellspacing","border","bgcolor","color","colspan","rowspan","dir","lang","role","title","alt","target","rel"].includes(name))el.removeAttribute(attr.name);
  }
+ const csp=doc.createElement("meta");csp.httpEquiv="Content-Security-Policy";csp.content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'";doc.head.append(csp);
+ const viewport=doc.createElement("meta");viewport.name="viewport";viewport.content="width=device-width,initial-scale=1";doc.head.append(viewport);
+ const frame=document.createElement("iframe");frame.className="email-frame";frame.title="Email message";frame.setAttribute("sandbox","allow-popups allow-popups-to-escape-sandbox");frame.referrerPolicy="no-referrer";frame.srcdoc="<!doctype html>"+doc.documentElement.outerHTML;return frame;
+}
+function renderMessageBody(raw){
+ const box=$("msgBody");box.replaceChildren();const text=decodeQuotedPrintable(raw);
+ if(/<!doctype html|<html\b|<body\b|<table\b/i.test(text)){box.className="message html-message";box.append(renderEmailHtml(text));return;}
+ box.className="message";const re=/https?:\/\/[^\s<>"'`]+/gi;let last=0,m;
+ while((m=re.exec(text))){box.append(document.createTextNode(text.slice(last,m.index)));let url=m[0],tail="";while(/[),.;!?\]}]$/.test(url)){tail=url.slice(-1)+tail;url=url.slice(0,-1);}try{const parsed=new URL(url);if(parsed.protocol!=="http:"&&parsed.protocol!=="https:")throw new Error("Invalid link");const a=document.createElement("a");a.href=parsed.href;a.target="_blank";a.rel="noopener noreferrer";a.textContent=url;box.append(a);}catch{box.append(document.createTextNode(url));}if(tail)box.append(document.createTextNode(tail));last=m.index+m[0].length;}
  box.append(document.createTextNode(text.slice(last)));
 }
 async function showMessage(id){
