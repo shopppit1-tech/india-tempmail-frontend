@@ -96,19 +96,22 @@ function decodeQuotedPrintable(text){
 function renderEmailHtml(source){
  const doc=new DOMParser().parseFromString(source,"text/html");
  doc.querySelectorAll("script,iframe,object,embed,form,base,meta,link,input,button,textarea,select,video,audio,source,svg,math").forEach(n=>n.remove());
- doc.querySelectorAll("img").forEach(img=>{const alt=img.getAttribute("alt");if(alt)img.replaceWith(doc.createTextNode("["+alt+"]"));else img.remove();});
- for(const style of doc.querySelectorAll("style"))style.textContent=style.textContent.replace(/@import[^;]+;?/gi,"").replace(/url\s*\([^)]*\)/gi,"none").replace(/expression\s*\([^)]*\)/gi,"");
+ for(const style of doc.querySelectorAll("style"))style.textContent=style.textContent.replace(/@import[^;]+;?/gi,"").replace(/expression\s*\([^)]*\)/gi,"");
  for(const el of doc.querySelectorAll("*"))for(const attr of [...el.attributes]){
   const name=attr.name.toLowerCase(),value=attr.value.trim();
-  if(name.startsWith("on")||["src","srcset","poster","background","formaction"].includes(name)){el.removeAttribute(attr.name);continue;}
+  if(name.startsWith("on")||["srcset","poster","background","formaction"].includes(name)){el.removeAttribute(attr.name);continue;}
+  if(name==="src"){
+   if(el.tagName==="IMG"&&(/^(https?:\/\/|data:image\/[a-z0-9.+-]+;base64,)/i.test(value)||value.startsWith("//"))){if(value.startsWith("//"))el.setAttribute("src","https:"+value);continue;}
+   el.removeAttribute(attr.name);continue;
+  }
   if(name==="href"){
    if(el.tagName!=="A"||!/^https?:\/\//i.test(value)){el.removeAttribute(attr.name);continue;}
    el.setAttribute("target","_blank");el.setAttribute("rel","noopener noreferrer");continue;
   }
-  if(name==="style"&&/(url\s*\(|expression\s*\(|@import|behavior\s*:)/i.test(value)){el.removeAttribute(attr.name);continue;}
+  if(name==="style"&&/(expression\s*\(|@import|behavior\s*:)/i.test(value)){el.removeAttribute(attr.name);continue;}
   if(!["style","class","id","width","height","align","valign","cellpadding","cellspacing","border","bgcolor","color","colspan","rowspan","dir","lang","role","title","alt","target","rel"].includes(name))el.removeAttribute(attr.name);
  }
- const csp=doc.createElement("meta");csp.httpEquiv="Content-Security-Policy";csp.content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'";doc.head.append(csp);
+ const csp=doc.createElement("meta");csp.httpEquiv="Content-Security-Policy";csp.content="default-src 'none'; style-src 'unsafe-inline'; img-src https: http: data:; font-src data:; base-uri 'none'; form-action 'none'";doc.head.append(csp);
  const viewport=doc.createElement("meta");viewport.name="viewport";viewport.content="width=device-width,initial-scale=1";doc.head.append(viewport);
  const frame=document.createElement("iframe");frame.className="email-frame";frame.title="Email message";frame.setAttribute("sandbox","allow-popups allow-popups-to-escape-sandbox");frame.referrerPolicy="no-referrer";frame.srcdoc="<!doctype html>"+doc.documentElement.outerHTML;return frame;
 }
