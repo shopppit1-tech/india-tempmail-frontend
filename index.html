@@ -87,6 +87,17 @@ async function refreshInbox(){
   }
  }catch(e){setStatus(e.message);}
 }
+function renderMessageBody(text){
+ const box=$("msgBody");box.replaceChildren();
+ const re=/https?:\/\/[^\s<>"'`]+/gi;let last=0,m;
+ while((m=re.exec(text))){
+  box.append(document.createTextNode(text.slice(last,m.index)));
+  let url=m[0],tail="";while(/[),.;!?\]}]$/.test(url)){tail=url.slice(-1)+tail;url=url.slice(0,-1);}
+  try{const parsed=new URL(url);if(parsed.protocol!=="http:"&&parsed.protocol!=="https:")throw new Error("Invalid link");const a=document.createElement("a");a.href=parsed.href;a.target="_blank";a.rel="noopener noreferrer";a.textContent=url;box.append(a);}catch{box.append(document.createTextNode(url));}
+  if(tail)box.append(document.createTextNode(tail));last=m.index+m[0].length;
+ }
+ box.append(document.createTextNode(text.slice(last)));
+}
 async function showMessage(id){
  try{
   const m=await api("/api/message/"+encodeURIComponent(inboxToken)+"/"+encodeURIComponent(id));
@@ -94,7 +105,7 @@ async function showMessage(id){
   $("msgMeta").textContent=(m.sender||"Unknown sender")+" · "+new Date(m.received_at).toLocaleString();
   $("otpBox").replaceChildren();
   if(m.otp){const code=document.createElement("div");code.className="otp";code.textContent=m.otp;const copy=document.createElement("button");copy.className="secondary";copy.textContent="Copy OTP";copy.onclick=async()=>{try{await navigator.clipboard.writeText(m.otp);setStatus("OTP copied.");}catch{setStatus("Select and copy the OTP manually.");}};$("otpBox").append(code,copy);}
-  $("msgBody").textContent=m.body_text||"(No plain-text body found)";
+  renderMessageBody(m.body_text||"(No readable text body found)");
   $("messageCard").scrollIntoView({behavior:"smooth",block:"start"});
  }catch(e){setStatus(e.message);}
 }
