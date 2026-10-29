@@ -91,7 +91,8 @@ async function refreshInbox(){
 function decodeQuotedPrintable(text){
  if(!/=3D|=20|=\r?\n/i.test(text))return text;
  const bytes=text.replace(/=\r?\n/g,"").replace(/=([0-9a-f]{2})/gi,(_,h)=>String.fromCharCode(parseInt(h,16)));
- try{return decodeURIComponent(escape(bytes));}catch{return bytes;}
+ let decoded;try{decoded=decodeURIComponent(escape(bytes));}catch{decoded=bytes;}
+ return decoded.replace(/([a-z0-9])=[ \t]+(?=[a-z0-9])/gi,"$1").replace(/[ \t]{2,}/g," ");
 }
 function renderEmailHtml(source){
  const doc=new DOMParser().parseFromString(source,"text/html");
