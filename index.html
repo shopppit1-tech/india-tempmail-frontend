@@ -5,6 +5,12 @@
 <meta name="theme-color" content="#5146d8">
 <title>IndiaTempMail — Temporary Email Inbox</title>
 <meta name="description" content="Create a temporary email address and check incoming messages in your browser.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--bg:#f5f6fc;--card:#fff;--ink:#17172b;--muted:#697087;--brand:#5146d8;--line:#e5e7f0}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink)}
@@ -98,4 +104,5 @@ $("copyBtn").addEventListener("click",async()=>{if(!currentAddress)return;try{aw
 $("closeMsg").addEventListener("click",()=>$("messageCard").hidden=true);
 if(inboxToken){refreshInbox();poller=setInterval(refreshInbox,10000);}else{$("address").textContent="Ready to generate";setStatus("Deploy the Worker and set API_BASE to begin.");}
 </script>
+<script>if("serviceWorker" in navigator && location.protocol==="https:"){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
 </body></html>
