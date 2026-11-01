@@ -1,5 +1,6 @@
-const CACHE_NAME = "india-tempmail-shell-v1";
-const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
+const CACHE_NAME = "india-tempmail-shell-v2";
+const APP_BASE = new URL("./", self.location.href).pathname;
+const SHELL = [APP_BASE, `${APP_BASE}manifest.webmanifest`, `${APP_BASE}icon-192.png`, `${APP_BASE}icon-512.png`];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -23,7 +24,7 @@ self.addEventListener("fetch", (event) => {
   if (
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
-    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith(`${APP_BASE}api/`) ||
     url.searchParams.has("inbox") ||
     !SHELL.includes(url.pathname)
   ) return;
@@ -34,6 +35,6 @@ self.addEventListener("fetch", (event) => {
         if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(url.pathname, response.clone()));
         return response;
       })
-      .catch(async () => (await caches.match(url.pathname)) || caches.match("/"))
+      .catch(async () => (await caches.match(url.pathname)) || caches.match(APP_BASE))
   );
 });

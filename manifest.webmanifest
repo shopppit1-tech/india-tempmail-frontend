@@ -1,22 +1,22 @@
 {
-  "id": "/",
+  "id": "./",
   "name": "IndiaTempMail — Temporary Email Inbox",
   "short_name": "IndiaTempMail",
   "description": "Buat alamat email sementara dan periksa pesan masuk.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f5f6fc",
   "theme_color": "#5146d8",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

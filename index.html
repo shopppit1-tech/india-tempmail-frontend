@@ -5,9 +5,9 @@
 <meta name="theme-color" content="#5146d8">
 <title>IndiaTempMail — Temporary Email Inbox</title>
 <meta name="description" content="Create a temporary email address and check incoming messages in your browser.">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -140,5 +140,5 @@ $("copyBtn").addEventListener("click",async()=>{if(!currentAddress)return;try{aw
 $("closeMsg").addEventListener("click",()=>$("messageCard").hidden=true);
 if(inboxToken){refreshInbox();poller=setInterval(refreshInbox,10000);}else{$("address").textContent="Ready to generate";setStatus("Deploy the Worker and set API_BASE to begin.");}
 </script>
-<script>if("serviceWorker" in navigator && location.protocol==="https:"){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
+<script>if("serviceWorker" in navigator && location.protocol==="https:"){navigator.serviceWorker.register(new URL("./sw.js", location.href), {scope: new URL("./", location.href).pathname}).catch(()=>{});}</script>
 </body></html>
